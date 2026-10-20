@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eot"
+version = "0.0.1"
+description = "Transfer learning on EuroSAT for onboard satellite image triage: accuracy vs. labelled data vs. compute."
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mohamed Amine Belkacem" }]
+dependencies = ["numpy", "pandas"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
