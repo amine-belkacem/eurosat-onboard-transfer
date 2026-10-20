@@ -37,6 +37,22 @@ Each class has its own random ranking of its training images, one ranking per se
 |---|---|---|---|---|---|
 | Training images | 191 | 947 | 1,890 | 4,727 | 18,900 |
 
+## Training setup
+
+| Config | Model | What is trained | Input | Budget |
+|---|---|---|---|---|
+| `cnn_scratch` | 4-block VGG-style CNN, 1.18 M params | everything, from random init | 64 px | max(40 epochs, 1,500 steps) |
+| `resnet50_probe` | ResNet-50, ImageNet (`resnet50.a1_in1k`), frozen | a linear layer on pooled features | 224 px | max(100 epochs, 1,000 steps) |
+| `resnet50_ft` | same weights | everything; head LR 1e-3, backbone 1e-4 | 224 px | max(15 epochs, 600 steps) |
+
+Some choices that matter:
+
+- **Steps, not epochs.** At 1 % an epoch is 3 batches, so "15 epochs" would be 45 optimizer steps. Each run trains for the larger of an epoch budget and a step budget, is evaluated on validation at evenly spaced points, keeps the best weights and stops after a few evaluations without gain.
+- **Preprocessing on the GPU.** The whole dataset fits in 332 MB as uint8, so it is loaded once. Resizing to 224 px (bicubic), flips and 90° rotations and normalization run on the GPU batch by batch. Kaggle gives two CPU cores, which would otherwise be the bottleneck.
+- **Linear probe on cached features.** Each probe run extracts features for its training subset and the validation set once (that time is counted in its training time), then fits `Standardize + Linear` on them. No augmentation for the probe.
+- **Test set read once**, after model selection, with a timestamp stored in the result file.
+- Hyperparameters were set before the first run and are not tuned. AdamW, linear warm-up over 5 % of the steps, then cosine decay; mixed precision on GPU.
+
 ## Reproduce
 
 ```bash
@@ -47,7 +63,11 @@ python scripts/download_eurosat.py              # ~95 MB, MD5-checked
 python scripts/prepare_splits.py                # regenerates splits/eurosat_rgb.csv (identical)
 python scripts/plot_dataset.py                  # figures/dataset_*.png
 pytest
+# quick end-to-end check on CPU (tiny budget, 200 eval images, results/_smoke)
+python scripts/run_experiment.py --config configs/resnet50_probe.yaml --pcts 1 --seeds 0 --smoke
 ```
+
+The real runs go through [`kaggle/milestone1.ipynb`](kaggle/milestone1.ipynb) on a Kaggle T4: it clones this repository, downloads the data, runs the configs and zips one JSON per run. `python scripts/summarize.py` then builds the tables from those files.
 
 ## Tests
 

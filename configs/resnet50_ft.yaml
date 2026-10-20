@@ -1,0 +1,14 @@
+# Full fine-tuning of ImageNet ResNet-50: new head at 10x the backbone LR.
+name: resnet50_ft
+model: resnet50
+mode: finetune
+input_size: 224
+loop:
+  batch_size: 64
+  lr_head: 1.0e-3
+  lr_backbone: 1.0e-4
+  weight_decay: 0.05
+  max_epochs: 15
+  min_steps: 600         # 1 %: 600 steps instead of 15 x 3
+  n_evals: 15
+  patience: 5

@@ -1,0 +1,15 @@
+# Reference without transfer: small CNN at the native 64 px.
+# Hyperparameters were fixed before any run and are not tuned on test.
+name: cnn_scratch
+model: small_cnn
+mode: scratch
+input_size: 64
+loop:
+  batch_size: 64
+  lr_head: 1.0e-3        # single LR for the whole network
+  lr_backbone: null
+  weight_decay: 0.05
+  max_epochs: 40         # a scratch model needs more passes than a pretrained one
+  min_steps: 1500        # 1 %: 1500 steps instead of 40 x 3
+  n_evals: 20
+  patience: 6

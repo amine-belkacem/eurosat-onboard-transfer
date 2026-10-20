@@ -1,0 +1,14 @@
+# Frozen ImageNet ResNet-50, features extracted once per run, linear head trained on top.
+name: resnet50_probe
+model: resnet50
+mode: probe
+input_size: 224
+loop:
+  batch_size: 256        # batches of cached 2048-d features, cheap
+  lr_head: 1.0e-3
+  lr_backbone: null
+  weight_decay: 1.0e-4
+  max_epochs: 100
+  min_steps: 1000
+  n_evals: 20
+  patience: 6

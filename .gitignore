@@ -18,3 +18,4 @@ __pycache__/
 .vscode/
 .idea/
 Thumbs.db
+results/_smoke/
