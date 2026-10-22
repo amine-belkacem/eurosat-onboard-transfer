@@ -19,3 +19,6 @@ __pycache__/
 .idea/
 Thumbs.db
 results/_smoke/
+
+# Visual Studio local settings
+.vs/

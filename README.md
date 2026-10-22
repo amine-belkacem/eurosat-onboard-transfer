@@ -107,7 +107,7 @@ The real runs go through [`kaggle/milestone1.ipynb`](kaggle/milestone1.ipynb) on
 | M5 | Geographic vs. random split (spatial leakage) | |
 | M6 | Energy per image on the Pi with a USB-C power meter | |
 
-A note for M5: I checked that the multispectral GeoTIFFs carry their georeferencing (UTM zone, tie point and 10 m pixel scale in the GeoTIFF tags), so a geographic split is possible. I still have to confirm that `Label_i.jpg` and `Label_i.tif` are the same tile before reusing the coordinates for the RGB images.
+A note for M5: I checked that the multispectral GeoTIFFs carry their georeferencing (UTM zone, tie point and 10 m pixel scale in the GeoTIFF tags), so a geographic split is possible. [`scripts/probe_geotiff.py`](scripts/probe_geotiff.py) redoes the check: it reads a few files out of the 2.1 GB archive with HTTP range requests and prints their tags. I still have to confirm that `Label_i.jpg` and `Label_i.tif` are the same tile before reusing the coordinates for the RGB images.
 
 ## References
 
