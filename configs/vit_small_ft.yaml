@@ -1,0 +1,14 @@
+# Full fine-tuning of ViT-S/16 with the same recipe as resnet50_ft (not tuned for either model).
+name: vit_small_ft
+model: vit_small
+mode: finetune
+input_size: 224
+loop:
+  batch_size: 64
+  lr_head: 1.0e-3
+  lr_backbone: 1.0e-4
+  weight_decay: 0.05
+  max_epochs: 15
+  min_steps: 600
+  n_evals: 15
+  patience: 5

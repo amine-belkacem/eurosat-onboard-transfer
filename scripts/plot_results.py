@@ -15,6 +15,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.ticker import FuncFormatter
 
 from eot.report import aggregate, load_runs
 from eot.splits import CLASSES
@@ -72,6 +73,45 @@ def plot_accuracy_and_time(results_dir: Path, pct: int, out: Path) -> None:
     plt.close(fig)
 
 
+def plot_data_efficiency(results_dir: Path, out: Path) -> None:
+    """Test accuracy and training time against the number of labelled images, one line per config."""
+    agg = aggregate(load_runs(results_dir))
+    n_train = load_runs(results_dir).groupby("pct")["n_train"].first()
+    configs = [c for c in CONFIG_STYLE if c in set(agg["config"])]
+
+    fig, (ax_acc, ax_time) = plt.subplots(1, 2, figsize=(13, 5.2))
+    for c in configs:
+        label, color = CONFIG_STYLE[c]
+        rows = agg[agg["config"] == c].sort_values("pct")
+        x = n_train.loc[rows["pct"]].to_numpy()
+        acc, acc_std = 100 * rows["test_accuracy_mean"], 100 * rows["test_accuracy_std"]
+        ax_acc.errorbar(x, acc, yerr=acc_std, marker="o", color=color, capsize=3, label=label)
+        # Direct label at the 1 % end, where the lines are furthest apart.
+        ax_acc.annotate(f"{acc.iloc[0]:.1f}", (x[0], acc.iloc[0]), xytext=(-8, 0),
+                        textcoords="offset points", ha="right", va="center", fontsize=8, color="black")
+        t, t_std = rows["train_time_total_s_mean"] / 60, rows["train_time_total_s_std"] / 60
+        ax_time.errorbar(x, t, yerr=t_std, marker="o", color=color, capsize=3, label=label)
+
+    pct_labels = [f"{n}\n({p} %)" for p, n in n_train.items()]
+    for ax in (ax_acc, ax_time):
+        ax.set_xscale("log")
+        ax.set_xticks(n_train.to_numpy(), pct_labels, fontsize=8)
+        ax.minorticks_off()
+        ax.set_xlabel("Labelled training images (log scale)")
+        ax.grid(alpha=0.3)
+        ax.spines[["top", "right"]].set_visible(False)
+    ax_acc.set_xlim(n_train.min() / 1.6, n_train.max() * 1.3)
+    ax_acc.set_ylabel("Test accuracy (%), mean ± std over seeds")
+    ax_acc.legend(frameon=False, fontsize=9, loc="lower right")
+    ax_time.set_yscale("log")
+    ax_time.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    ax_time.set_ylabel(f"Training time per run (min, log scale), {agg['device'].iloc[0]}")
+    fig.suptitle("Accuracy and cost against the amount of labelled data (EuroSAT RGB, 4,050 test images)")
+    fig.tight_layout()
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+
+
 def summed_confusion(results_dir: Path, config: str, pct: int) -> np.ndarray:
     files = sorted((results_dir / config).glob(f"pct{pct:03d}_seed*.json"))
     if not files:
@@ -113,6 +153,8 @@ def main() -> None:
     plot_accuracy_and_time(args.results_dir, args.pct, args.out_dir / f"accuracy_time_pct{args.pct:03d}.png")
     plot_confusions(args.results_dir, ["resnet50_probe", "resnet50_ft"], args.pct,
                     args.out_dir / f"confusion_resnet50_pct{args.pct:03d}.png")
+    if load_runs(args.results_dir)["pct"].nunique() > 1:
+        plot_data_efficiency(args.results_dir, args.out_dir / "data_efficiency.png")
     print(f"Figures written to {args.out_dir}")
 
 

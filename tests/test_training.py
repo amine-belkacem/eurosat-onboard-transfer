@@ -6,6 +6,8 @@ suite runs offline in CI.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -188,3 +190,24 @@ def test_run_end_to_end(tiny_dataset, mode, lr_backbone):
     check(0.0 <= res["test_accuracy"] <= 1.0, True, "precision dans [0, 1]")
     if mode == "probe":
         check(res["n_trainable"], 512 * 10 + 10, "parametres entrainables de la sonde")
+
+
+# ---------------------------------------------------------------- configs
+
+CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs"
+
+
+@pytest.mark.parametrize("path", sorted(CONFIG_DIR.glob("*.yaml")), ids=lambda p: p.stem)
+def test_config_loads(path):
+    cfg = ExperimentConfig.from_yaml(path)
+    check(cfg.name, path.stem, "le nom de la config correspond au fichier")
+    expected_size = 64 if cfg.mode == "scratch" else 224
+    check(cfg.input_size, expected_size, "taille d'entree")
+
+
+def test_same_recipe_for_both_backbones():
+    # The comparison is only fair if both backbones use the same loop.
+    for mode in ("probe", "ft"):
+        r = ExperimentConfig.from_yaml(CONFIG_DIR / f"resnet50_{mode}.yaml").loop
+        v = ExperimentConfig.from_yaml(CONFIG_DIR / f"vit_small_{mode}.yaml").loop
+        check(v, r, f"meme recette {mode} pour ResNet-50 et ViT-S")

@@ -1,0 +1,15 @@
+# Frozen ViT-S/16 (ImageNet-21k pretrained, ImageNet-1k fine-tuned), linear head on the 384-d class token.
+# Same loop as resnet50_probe so the two backbones are compared under one recipe.
+name: vit_small_probe
+model: vit_small
+mode: probe
+input_size: 224
+loop:
+  batch_size: 256
+  lr_head: 1.0e-3
+  lr_backbone: null
+  weight_decay: 1.0e-4
+  max_epochs: 100
+  min_steps: 1000
+  n_evals: 20
+  patience: 6
