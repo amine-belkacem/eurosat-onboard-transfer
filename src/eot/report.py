@@ -10,7 +10,7 @@ import pandas as pd
 RUN_COLUMNS = ["config", "model", "mode", "pct", "seed", "n_train", "best_val_acc", "test_accuracy",
                "test_f1_macro", "train_time_total_s", "time_to_best_s", "feature_time_s",
                "best_step", "steps_done", "stopped_early", "n_params", "n_trainable", "device"]
-METRICS = ["test_accuracy", "test_f1_macro", "train_time_total_s", "time_to_best_s"]
+METRICS = ["test_accuracy", "test_f1_macro", "train_time_total_s", "time_to_best_total_s"]
 
 
 def load_runs(results_dir: Path) -> pd.DataFrame:
@@ -23,7 +23,12 @@ def load_runs(results_dir: Path) -> pd.DataFrame:
         rows.append({k: run.get(k) for k in RUN_COLUMNS})
     if not rows:
         raise FileNotFoundError(f"no result files under {results_dir}")
-    return pd.DataFrame(rows)
+    runs = pd.DataFrame(rows)
+    # time_to_best_s is measured inside the training loop. For the probe the
+    # feature extraction happens before it and must be added, otherwise the
+    # probe would look faster than it is.
+    runs["time_to_best_total_s"] = runs["feature_time_s"] + runs["time_to_best_s"]
+    return runs
 
 
 def aggregate(runs: pd.DataFrame) -> pd.DataFrame:

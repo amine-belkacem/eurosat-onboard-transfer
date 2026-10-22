@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import platform
+import subprocess
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -62,6 +63,16 @@ def device_name(device: torch.device) -> str:
     if device.type == "cuda":
         return torch.cuda.get_device_name(device)
     return platform.processor() or platform.machine()
+
+
+def git_commit() -> str:
+    """Commit of the code that produced a result, or "unknown" outside a git checkout."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True,
+                             check=True, cwd=Path(__file__).resolve().parent)
+        return out.stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
 
 
 def run(cfg: ExperimentConfig, ds: Dataset, pct: int, seed: int, device: torch.device,
@@ -133,6 +144,7 @@ def run(cfg: ExperimentConfig, ds: Dataset, pct: int, seed: int, device: torch.d
         "test_evaluated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "device": device_name(device),
         "torch": torch.__version__,
+        "git_commit": git_commit(),
         "loop": cfg.loop.__dict__,
         "eval_limit": eval_limit,
     }

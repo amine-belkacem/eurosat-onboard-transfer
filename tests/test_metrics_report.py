@@ -64,11 +64,11 @@ def test_confusion_shape_mismatch():
         confusion_matrix(np.array([0, 1]), np.array([0]), 2)
 
 
-def _write_run(directory, config, pct, seed, acc, time_s, device="Tesla T4"):
+def _write_run(directory, config, pct, seed, acc, time_s, device="Tesla T4", feature_time_s=0.0):
     directory.mkdir(parents=True, exist_ok=True)
     run = {"config": config, "model": "m", "mode": "finetune", "pct": pct, "seed": seed,
            "n_train": 10, "best_val_acc": acc, "test_accuracy": acc, "test_f1_macro": acc,
-           "train_time_total_s": time_s, "time_to_best_s": time_s, "feature_time_s": 0.0,
+           "train_time_total_s": time_s, "time_to_best_s": time_s, "feature_time_s": feature_time_s,
            "best_step": 1, "steps_done": 1, "stopped_early": False, "n_params": 1,
            "n_trainable": 1, "device": device}
     (directory / f"pct{pct:03d}_seed{seed}.json").write_text(json.dumps(run))
@@ -95,3 +95,9 @@ def test_aggregate_refuses_mixed_devices(tmp_path):
     _write_run(tmp_path / "cfg", "cfg", 100, 1, 0.9, 10.0, device="Tesla P100-PCIE-16GB")
     with pytest.raises(ValueError):
         aggregate(load_runs(tmp_path))
+
+
+def test_time_to_best_includes_feature_extraction(tmp_path):
+    # probe: 40 s of feature extraction + best head after 5 s -> 45 s
+    _write_run(tmp_path / "probe", "probe", 100, 0, 0.9, 5.0, feature_time_s=40.0)
+    check_close(load_runs(tmp_path)["time_to_best_total_s"].iloc[0], 45.0, "temps jusqu'au meilleur (sonde)")

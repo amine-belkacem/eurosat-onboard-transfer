@@ -8,7 +8,29 @@ Which transfer-learning strategy should you pick to classify Sentinel-2 image ti
 2. how many labelled images it needs (1 % to 100 % of the training set);
 3. compute cost, both for training (Kaggle GPU) and for inference on a Raspberry Pi 5 standing in for an onboard computer.
 
-> **Status: milestone 0 (data pipeline).** No model has been trained yet, so this README contains no accuracy figures. Results will be added as each milestone is measured.
+> **Status: milestone 1 done** (scratch CNN and ResNet-50 at 100 % of the data). The low-data fractions, the ViT and the Raspberry Pi measurements come next, so the conclusions below only cover the full-data case.
+
+## First results (milestone 1, 100 % of the training set)
+
+![Accuracy and training time](figures/accuracy_time_pct100.png)
+
+| Config | Test accuracy (%) | Macro F1 (%) | Training time per run (min) |
+|---|---|---|---|
+| CNN from scratch (1.2 M params) | 98.63 ± 0.08 | 98.57 ± 0.07 | 3.5 ± 0.3 |
+| ResNet-50 linear probe (20 k trainable) | 96.21 ± 0.25 | 96.04 ± 0.27 | 0.8 ± 0.1 |
+| ResNet-50 fine-tuned (23.5 M params) | 98.65 ± 0.20 | 98.60 ± 0.21 | 21.3 ± 0.3 |
+
+Mean ± sample standard deviation over 3 seeds, 4,050 test images, one Tesla T4 on Kaggle. Training time includes the periodic validation passes and, for the probe, the feature extraction.
+
+What I take from it:
+
+- **With all 18,900 labelled images, transfer buys nothing on accuracy.** My 1.2 M-parameter CNN and the fine-tuned ResNet-50 land within 0.02 points of each other, well inside the seed-to-seed spread. The fine-tuned ResNet-50 also matches the 98.57 % that Helber et al. report for it (on an 80/20 split, so only loosely comparable), which was my check that the pipeline is sound. It costs 6 times more training time than the CNN and 20 times more parameters to run on board.
+- **Frozen ImageNet features are 2.4 points short**, and almost all of the gap is River vs. Highway (about 50 errors each way over the 3 seeds) plus the three crop and vegetation classes. Rivers and highways are both thin lines crossing the tile. Without fine-tuning, features learnt on ImageNet photos see the shape but do not weigh the colour and texture that separate water from asphalt. Fine-tuning brings River → Highway down from 50 to 11.
+- The interesting part is therefore not this table but what happens with fewer labels, which is milestone 2. The probe trains in under a minute and needs no backprop through the backbone; if it holds up at 1 % while the scratch CNN collapses, the conclusion flips.
+
+![Confusion matrices](figures/confusion_resnet50_pct100.png)
+
+Limits of these numbers: 3 seeds give a rough spread, not a confidence interval. Hyperparameters were set once and not tuned for any model; a tuned probe (other learning rate, augmented features) would likely close part of the gap. For the scratch CNN the best validation score came at the very last step for 2 seeds out of 3. That is expected with a cosine schedule that only reaches its lowest learning rate at the end, but a longer budget might still add a little.
 
 ## Why this question
 
@@ -78,8 +100,8 @@ The real runs go through [`kaggle/milestone1.ipynb`](kaggle/milestone1.ipynb) on
 | Milestone | Content | State |
 |---|---|---|
 | M0 | Download, frozen split, nested subsets, tests, CI | done |
-| M1 | Training loop; scratch CNN and ResNet-50 (probe and fine-tune) at 100 %, 3 seeds | next |
-| M2 | ViT-S/16, all 5 fractions, 75 runs; accuracy, data-efficiency and training-time figures | |
+| M1 | Training loop; scratch CNN and ResNet-50 (probe and fine-tune) at 100 %, 3 seeds | done |
+| M2 | ViT-S/16, all 5 fractions, 75 runs; accuracy, data-efficiency and training-time figures | next |
 | M3 | ONNX export, INT8 quantization, Raspberry Pi 5 latency and memory; accuracy/latency Pareto front | |
 | M4 | 13-band multispectral version: adapting RGB-pretrained weights to 13 channels | |
 | M5 | Geographic vs. random split (spatial leakage) | |
