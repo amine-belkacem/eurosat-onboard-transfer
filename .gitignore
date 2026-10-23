@@ -22,3 +22,6 @@ results/_smoke/
 
 # Visual Studio local settings
 .vs/
+
+# Checkpoints and exported models (large, regenerated from Kaggle + export_models.py)
+deploy/

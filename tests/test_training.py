@@ -201,8 +201,10 @@ CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs"
 def test_config_loads(path):
     cfg = ExperimentConfig.from_yaml(path)
     check(cfg.name, path.stem, "le nom de la config correspond au fichier")
-    expected_size = 64 if cfg.mode == "scratch" else 224
-    check(cfg.input_size, expected_size, "taille d'entree")
+    if cfg.mode == "scratch":
+        check(cfg.input_size, 64, "taille d'entree du CNN (native)")
+    else:
+        check(cfg.input_size in (112, 224), True, f"taille d'entree {cfg.input_size}")
 
 
 def test_same_recipe_for_both_backbones():

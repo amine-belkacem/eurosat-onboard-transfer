@@ -1,0 +1,14 @@
+# Lighter deployment candidate: ResNet-18 fine-tuned with the resnet50_ft recipe.
+name: resnet18_ft
+model: resnet18
+mode: finetune
+input_size: 224
+loop:
+  batch_size: 64
+  lr_head: 1.0e-3
+  lr_backbone: 1.0e-4
+  weight_decay: 0.05
+  max_epochs: 15
+  min_steps: 600
+  n_evals: 15
+  patience: 5

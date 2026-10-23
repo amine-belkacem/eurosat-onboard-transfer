@@ -1,0 +1,15 @@
+# ResNet-50 fine-tuned at 112 px instead of 224 px: about 4x fewer operations.
+# Tests whether upsampling the 64 px tiles all the way to 224 is worth its cost.
+name: resnet50_ft_112
+model: resnet50
+mode: finetune
+input_size: 112
+loop:
+  batch_size: 64
+  lr_head: 1.0e-3
+  lr_backbone: 1.0e-4
+  weight_decay: 0.05
+  max_epochs: 15
+  min_steps: 600
+  n_evals: 15
+  patience: 5

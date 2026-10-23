@@ -6,3 +6,5 @@ pyyaml
 pytest
 torch
 timm
+onnx
+onnxruntime

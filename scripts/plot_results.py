@@ -27,6 +27,9 @@ CONFIG_STYLE = {
     "resnet50_ft": ("ResNet-50 fine-tuned", "#e87ba4"),
     "vit_small_probe": ("ViT-S/16 linear probe", "#eda100"),
     "vit_small_ft": ("ViT-S/16 fine-tuned", "#008300"),
+    # The five colours above are taken, so the two deployment-only configs get blue and orange.
+    "resnet18_ft": ("ResNet-18 fine-tuned", "#2a78d6"),
+    "resnet50_ft_112": ("ResNet-50 fine-tuned, 112 px", "#eb6834"),
 }
 WHITE_TO_TEAL = LinearSegmentedColormap.from_list("white_teal", ["#ffffff", "#1baf7a", "#0b4f37"])
 
@@ -77,7 +80,9 @@ def plot_data_efficiency(results_dir: Path, out: Path) -> None:
     """Test accuracy and training time against the number of labelled images, one line per config."""
     agg = aggregate(load_runs(results_dir))
     n_train = load_runs(results_dir).groupby("pct")["n_train"].first()
-    configs = [c for c in CONFIG_STYLE if c in set(agg["config"])]
+    # Only configs measured at every fraction; the deployment-only ones exist at 100 % alone.
+    n_fractions = agg.groupby("config")["pct"].nunique()
+    configs = [c for c in CONFIG_STYLE if n_fractions.get(c, 0) == len(n_train)]
 
     fig, (ax_acc, ax_time) = plt.subplots(1, 2, figsize=(13, 5.2))
     first_points = []

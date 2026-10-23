@@ -1,0 +1,5 @@
+# Raspberry Pi 5 (64-bit Raspberry Pi OS): inference benchmark only, no PyTorch.
+numpy
+pandas
+pillow
+onnxruntime

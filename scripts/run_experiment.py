@@ -29,6 +29,10 @@ def main() -> None:
     parser.add_argument("--out-dir", type=Path, default=Path("results"))
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--checkpoint-dir", type=Path, default=None,
+                        help="save the selected weights here (scratch and fine-tuned configs only)")
+    parser.add_argument("--checkpoint-seeds", type=int, nargs="+", default=[0],
+                        help="seeds whose weights are saved when --checkpoint-dir is set")
     parser.add_argument("--smoke", action="store_true",
                         help="tiny step budget and 200 eval images, to check the pipeline on CPU")
     args = parser.parse_args()
@@ -38,7 +42,7 @@ def main() -> None:
     out_dir = args.out_dir
     if args.smoke:
         cfg = dataclasses.replace(cfg, loop=dataclasses.replace(
-            cfg.loop, max_epochs=1, min_steps=6, n_evals=2, patience=2, batch_size=16, eval_batch_size=50))
+            cfg.loop, max_epochs=0, min_steps=6, n_evals=2, patience=2, batch_size=16, eval_batch_size=50))
         eval_limit, out_dir = 200, args.out_dir / "_smoke"
 
     device = torch.device(args.device)
@@ -55,7 +59,10 @@ def main() -> None:
                 print(f"skip {path} (exists)")
                 continue
             t0 = time.perf_counter()
-            res = run(cfg, ds, pct, seed, device, eval_limit=eval_limit)
+            ckpt = None
+            if args.checkpoint_dir is not None and seed in args.checkpoint_seeds:
+                ckpt = args.checkpoint_dir / f"{cfg.name}_pct{pct:03d}_seed{seed}.pt"
+            res = run(cfg, ds, pct, seed, device, eval_limit=eval_limit, checkpoint_path=ckpt)
             save(res, path)
             print(f"{cfg.name} {pct:3d}% seed {seed}: val {res['best_val_acc']:.4f} "
                   f"test {res['test_accuracy']:.4f} train {res['train_time_total_s']:.0f}s "

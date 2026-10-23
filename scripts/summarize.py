@@ -7,7 +7,8 @@ from pathlib import Path
 
 from eot.report import aggregate, load_runs, markdown_table
 
-CONFIG_ORDER = ["cnn_scratch", "resnet50_probe", "resnet50_ft", "vit_small_probe", "vit_small_ft"]
+CONFIG_ORDER = ["cnn_scratch", "resnet50_probe", "resnet50_ft", "vit_small_probe", "vit_small_ft",
+                "resnet18_ft", "resnet50_ft_112"]
 
 
 def main() -> None:

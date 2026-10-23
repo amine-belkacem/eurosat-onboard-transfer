@@ -76,8 +76,17 @@ def git_commit() -> str:
 
 
 def run(cfg: ExperimentConfig, ds: Dataset, pct: int, seed: int, device: torch.device,
-        pretrained: bool = True, eval_limit: int | None = None) -> dict:
-    """Train on `pct` % of the training split, select on val, then evaluate on test once."""
+        pretrained: bool = True, eval_limit: int | None = None,
+        checkpoint_path: Path | None = None) -> dict:
+    """Train on `pct` % of the training split, select on val, then evaluate on test once.
+
+    With `checkpoint_path`, the selected weights are saved for deployment. Only
+    scratch and fine-tuned models are saved: a probe has the same inference
+    graph as the fine-tuned model of its backbone, so it is never the better
+    choice to deploy.
+    """
+    if checkpoint_path is not None and cfg.mode == "probe":
+        raise ValueError("checkpoints are only saved for scratch and fine-tuned models")
     torch.manual_seed(seed)
     x_tr, y_tr, tr_paths = ds.rows("train", pct, seed)
     x_val, y_val, _ = ds.rows("val")
@@ -120,7 +129,9 @@ def run(cfg: ExperimentConfig, ds: Dataset, pct: int, seed: int, device: torch.d
         y_pred = training.predict(model, x_te, prep_images, device, cfg.loop.eval_batch_size, cfg.loop.amp)
 
     test = metrics.summarize(y_te.numpy(), y_pred, len(CLASSES))
-    result.pop("best_state")
+    best_state = result.pop("best_state")
+    if checkpoint_path is not None:
+        save_checkpoint(checkpoint_path, cfg, best_state, test["accuracy"])
     return {
         "config": cfg.name,
         "model": cfg.model,
@@ -148,6 +159,13 @@ def run(cfg: ExperimentConfig, ds: Dataset, pct: int, seed: int, device: torch.d
         "loop": cfg.loop.__dict__,
         "eval_limit": eval_limit,
     }
+
+
+def save_checkpoint(path: Path, cfg: ExperimentConfig, state_dict: dict, test_accuracy: float) -> None:
+    """Weights plus what is needed to rebuild the model without the YAML file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save({"config": cfg.name, "model": cfg.model, "input_size": cfg.input_size,
+                "state_dict": state_dict, "test_accuracy": test_accuracy, "git_commit": git_commit()}, path)
 
 
 def result_path(out_dir: Path, cfg_name: str, pct: int, seed: int) -> Path:
