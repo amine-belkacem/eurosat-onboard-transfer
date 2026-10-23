@@ -20,7 +20,9 @@ def main() -> None:
     runs.to_csv(args.results_dir / "runs.csv", index=False, lineterminator="\n")
     agg.to_csv(args.results_dir / "summary.csv", index=False, lineterminator="\n")
     table = markdown_table(agg, CONFIG_ORDER)
-    (args.results_dir / "summary.md").write_text(table + "\n")
+    # Explicit UTF-8: on Windows the default code page would write "±" as a single
+    # byte that GitHub then shows as garbage.
+    (args.results_dir / "summary.md").write_text(table + "\n", encoding="utf-8")
     print(table)
 
 

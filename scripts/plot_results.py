@@ -80,17 +80,27 @@ def plot_data_efficiency(results_dir: Path, out: Path) -> None:
     configs = [c for c in CONFIG_STYLE if c in set(agg["config"])]
 
     fig, (ax_acc, ax_time) = plt.subplots(1, 2, figsize=(13, 5.2))
+    first_points = []
     for c in configs:
         label, color = CONFIG_STYLE[c]
         rows = agg[agg["config"] == c].sort_values("pct")
         x = n_train.loc[rows["pct"]].to_numpy()
         acc, acc_std = 100 * rows["test_accuracy_mean"], 100 * rows["test_accuracy_std"]
         ax_acc.errorbar(x, acc, yerr=acc_std, marker="o", color=color, capsize=3, label=label)
-        # Direct label at the 1 % end, where the lines are furthest apart.
-        ax_acc.annotate(f"{acc.iloc[0]:.1f}", (x[0], acc.iloc[0]), xytext=(-8, 0),
-                        textcoords="offset points", ha="right", va="center", fontsize=8, color="black")
+        first_points.append((x[0], acc.iloc[0]))
         t, t_std = rows["train_time_total_s_mean"] / 60, rows["train_time_total_s_std"] / 60
         ax_time.errorbar(x, t, yerr=t_std, marker="o", color=color, capsize=3, label=label)
+
+    # Direct labels at the smallest fraction, where the lines are furthest apart.
+    # Close values are pushed apart vertically so the labels never overlap.
+    y_lo, y_hi = ax_acc.get_ylim()
+    min_gap = 0.035 * (y_hi - y_lo)
+    placed: list[float] = []
+    for x0, y0 in sorted(first_points, key=lambda p: p[1]):
+        y_text = max(y0, placed[-1] + min_gap) if placed else y0
+        placed.append(y_text)
+        ax_acc.annotate(f"{y0:.1f}", (x0, y0), xytext=(x0 / 1.12, y_text), textcoords="data",
+                        ha="right", va="center", fontsize=8, color="black")
 
     pct_labels = [f"{n}\n({p} %)" for p, n in n_train.items()]
     for ax in (ax_acc, ax_time):
